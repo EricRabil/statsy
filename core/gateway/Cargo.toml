@@ -18,3 +18,5 @@ futures = { version = "0.3", default-features = false, features = ["alloc"] }
 async-recursion = "0.3.2"
 redis-async = { git = "https://github.com/EricRabil/redis-async-rs" }
 tokio-core = { version = "0.1" }
+arc-swap = "*"
+dashmap = "4.0"

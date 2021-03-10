@@ -8,5 +8,14 @@ edition = "2018"
 
 [dependencies]
 json = "*"
-redis = "*"
-rocket = "*"
+redis = { version = "*", features = ["tokio-comp"] }
+rocket = { git = "https://github.com/SergioBenitez/Rocket" }
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1.43"
+jsonwebtoken = "7"
+serde = { version = "1", features = ["derive"] }
+lazy_static = "*"
+
+[global.limits]
+json = 5242880
+string = 5242880

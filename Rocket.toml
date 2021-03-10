@@ -1,0 +1,3 @@
+[global.limits]
+json = 5242880
+string = 5242880

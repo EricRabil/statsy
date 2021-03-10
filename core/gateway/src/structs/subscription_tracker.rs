@@ -1,9 +1,15 @@
-use crate::structs::MultithreadedSubscription;
+use crate::structs::Subscription;
+
+
+use dashmap::DashSet;
+use tokio::sync::RwLock;
 
 pub struct SubscriptionTracker {
-    pub last_subscribed_paths: Vec<String>,
-    pub root_subscription: MultithreadedSubscription
+    pub last_subscribed_paths: Arc<RwLock<Vec<String>>>,
+    pub root_subscription: Arc<Subscription>
 }
+
+use std::sync::{ Arc };
 
 #[derive(Debug)]
 pub struct SubscriptionDiff {
@@ -15,19 +21,25 @@ fn formatted_absolute_keypath(state: String, keypath: String) -> String {
     format!("/state/{}/keypath/{}", state, keypath)
 }
 
-impl SubscriptionTracker {
-    pub async fn set_subscribed(&self, subscribed: bool, keypaths: Vec<String>, stream: String, id: String) {
-        let root = self.root_subscription.write().await;
+use std::hash::Hash;
+use std::collections::HashSet;
 
+fn dedup<T: Eq + Hash + Copy>(v: &mut Vec<T>) { // note the Copy constraint
+    let mut uniques = HashSet::new();
+    v.retain(|e| uniques.insert(*e));
+}
+
+impl SubscriptionTracker {
+    pub fn set_subscribed(&self, subscribed: bool, keypaths: Vec<String>, stream: String, id: String) {
         for key in keypaths {
             let id = id.to_owned();
             let mut key = formatted_absolute_keypath(stream.to_owned(), key);
     
-            if let Some(subscription) = root.get_subscription(&mut key).await {
+            if let Some(subscription) = self.root_subscription.get_subscription(&mut key, true) {
                 if subscribed {
-                    subscription.write().await.add_client(id);
+                    subscription.add_client(id);
                 } else {
-                    subscription.write().await.remove_client(id);
+                    subscription.remove_client(id);
                 }
             } else {
                 panic!("WAHA");
@@ -35,17 +47,15 @@ impl SubscriptionTracker {
         }
     }
 
-    pub async fn delete_client(&self, id: String) {
-        self.root_subscription.write().await.remove_client_recursive(id).await;
+    pub fn delete_client(&self, id: String) {
+        self.root_subscription.remove_client_recursive(&id);
     }
 
-    pub async fn clients_for_keypath(&self, keypath: String) -> Vec<String> {
-        let root = self.root_subscription.read().await;
-
+    pub fn clients_for_keypath(&self, keypath: String) -> Vec<String> {
         let mut keypath = keypath.to_string();
 
-        let mut observers = match root.get_subscription(&mut keypath).await {
-            Some(subscription) => subscription.read().await.collect_observers().await,
+        let mut observers = match self.root_subscription.get_subscription(&mut keypath, true) {
+            Some(subscription) => subscription.collect_observers(),
             _ => Vec::new()
         };
 
@@ -55,27 +65,26 @@ impl SubscriptionTracker {
         observers
     }
 
-    pub async fn clients_for_bubble_down(&self, keypath: String) -> Vec<(String, Vec<String>)> {
-        let root = self.root_subscription.read().await;
-
+    pub fn clients_for_bubble_down(&self, keypath: String) -> Vec<(String, Vec<String>)> {
         let mut keypath = keypath.to_string();
 
         println!("Getting bubbledown clients for {}", keypath);
 
-        match root.get_subscription(&mut keypath).await {
-            Some(subscription) => subscription.read().await.collect_descendants().await,
+        match self.root_subscription.get_subscription(&mut keypath, false) {
+            Some(subscription) => subscription.collect_descendants(),
             _ => Vec::new()
         }
     }
 
-    pub async fn diff_keypaths(&mut self) -> SubscriptionDiff {
-        let old_keypaths = &self.last_subscribed_paths;
-        let new_keypaths = self.dump_keypaths().await;
+    pub async fn diff_keypaths(&self) -> SubscriptionDiff {
+        let mut old_keypaths = self.last_subscribed_paths.write().await;
+        let new_keypaths = self.dump_keypaths();
 
         let new_subscribed: Vec<String> = new_keypaths.iter().filter(|keypath| !old_keypaths.contains(keypath)).map(|keypath| keypath.to_string()).collect();
         let unsubscribed: Vec<String> = old_keypaths.iter().filter(|keypath| !new_keypaths.contains(keypath)).map(|keypath| keypath.to_string()).collect();
 
-        self.last_subscribed_paths = new_keypaths;
+        old_keypaths.clear();
+        old_keypaths.extend(new_keypaths);
 
         return SubscriptionDiff {
             new_subscribed,
@@ -83,25 +92,30 @@ impl SubscriptionTracker {
         }
     }
 
-    pub async fn dump_keypaths(&self) -> Vec<String> {
+    pub fn dump_keypaths(&self) -> Vec<String> {
         let mut patterns: Vec<Vec<String>> = Vec::new();
 
-        self.root_subscription.read().await.collect_pubsub_patterns(&mut patterns, Vec::new()).await;
+        self.root_subscription.collect_pubsub_patterns(&mut patterns, Vec::new());
 
-        let mut assembled_patterns: Vec<String> = patterns.iter()
-            .map(|pattern| {
-                let mut joined = pattern.join("/");
+        let mut uniques: HashSet<String> = HashSet::new();
 
-                if !joined.ends_with("*") && !joined.ends_with("/") {
-                    joined += "/";
-                }
+        for pattern in patterns {
+            let mut joined = pattern.join("/");
 
-                joined
-            })
-            .collect();
-        assembled_patterns.sort_unstable();
-        assembled_patterns.dedup();
+            if !joined.ends_with("*") && !joined.ends_with("/") {
+                joined += "/";
+            }
 
-        return assembled_patterns;
+            uniques.insert(joined);
+        }
+
+        return uniques.into_iter().collect();
+    }
+
+    pub fn new() -> SubscriptionTracker {
+        SubscriptionTracker {
+            last_subscribed_paths: Arc::new(RwLock::new(Vec::new())),
+            root_subscription: Subscription::new()
+        }
     }
 }
