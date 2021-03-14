@@ -1,0 +1,39 @@
+version: "3.9"
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+services:
+  rest:
+    build: core/rest
+    environment:
+      REDIS_HOST: "172.20.0.2:6379"
+      TOKEN_SECRET: youshouldmaybechangethis
+      ROCKET_ADDRESS: 0.0.0.0
+    ports:
+      - 8880:8000
+    networks:
+      internal:
+        ipv4_address: 172.20.0.4
+      default:
+    depends_on:
+      - "redis"
+  gateway:
+    build: core/gateway
+    environment:
+      REDIS_HOST: "172.20.0.2:6379"
+    ports:
+      - 8881:3030
+    networks:
+      internal:
+        ipv4_address: 172.20.0.3
+      default:
+    depends_on:
+      - "redis"
+  redis:
+    image: redislabs/rejson:latest
+    networks:
+      internal:
+        ipv4_address: 172.20.0.2

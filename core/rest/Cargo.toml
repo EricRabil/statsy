@@ -15,7 +15,3 @@ async-trait = "0.1.43"
 jsonwebtoken = "7"
 serde = { version = "1", features = ["derive"] }
 lazy_static = "*"
-
-[global.limits]
-json = 5242880
-string = 5242880

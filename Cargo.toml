@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "core/rest/",
-    "core/gateway/"
+    "core/gateway/",
+    "core/auth"
 ]

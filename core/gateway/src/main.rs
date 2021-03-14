@@ -13,7 +13,7 @@ use std::sync::{
 };
 use std::convert::Infallible;
 use futures::{StreamExt};
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{mpsc};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
@@ -33,7 +33,7 @@ mod structs;
 
 use snowflake::ProcessUniqueId;
 
-use crate::structs::{Subscription, SubscriptionTracker};
+use crate::structs::{SubscriptionTracker};
 use crate::intos::*;
 
 #[macro_use] extern crate lazy_static;
@@ -328,7 +328,7 @@ fn main() {
             .and_then(ws_handler);
 
         warp::serve(routes)
-            .run(([127, 0, 0, 1], 3030))
+            .run(([0, 0, 0, 0], 3030))
             .await;
     });
 }

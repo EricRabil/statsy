@@ -1,7 +1,5 @@
 use crate::structs::Subscription;
 
-
-use dashmap::DashSet;
 use tokio::sync::RwLock;
 
 pub struct SubscriptionTracker {
@@ -21,13 +19,7 @@ fn formatted_absolute_keypath(state: String, keypath: String) -> String {
     format!("/state/{}/keypath/{}", state, keypath)
 }
 
-use std::hash::Hash;
 use std::collections::HashSet;
-
-fn dedup<T: Eq + Hash + Copy>(v: &mut Vec<T>) { // note the Copy constraint
-    let mut uniques = HashSet::new();
-    v.retain(|e| uniques.insert(*e));
-}
 
 impl SubscriptionTracker {
     pub fn set_subscribed(&self, subscribed: bool, keypaths: Vec<String>, stream: String, id: String) {
