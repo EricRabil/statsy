@@ -352,6 +352,7 @@ fn _inner_cors<'a>(origin: String) -> Response<'a> {
     response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, OPTIONS"));
     response.set_header(Header::new("Access-Control-Allow-Headers", "Content-Type, Authorization"));
     response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    response.set_header(Header::new("Access-Control-Max-Age", "86400"));
     response.set_header(Header::new("Content-Security-Policy", "frame-ancestors *"));
 
     response.set_header(ContentType::Plain);
