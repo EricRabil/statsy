@@ -25,6 +25,7 @@ RUN groupadd $APP_USER \
     && mkdir -p ${APP}
 
 COPY --from=builder /rest/target/release/rest ${APP}/rest
+COPY --from=builder /rest/Rocket.toml ${APP}/Rocket.toml
 
 RUN chown -R $APP_USER:$APP_USER ${APP}
 
