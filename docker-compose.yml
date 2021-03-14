@@ -20,6 +20,7 @@ services:
       default:
     depends_on:
       - "redis"
+    restart: unless-stopped
   gateway:
     build: core/gateway
     environment:
@@ -32,8 +33,10 @@ services:
       default:
     depends_on:
       - "redis"
+    restart: unless-stopped
   redis:
     image: redislabs/rejson:latest
+    restart: unless-stopped
     networks:
       internal:
         ipv4_address: 172.20.0.2
