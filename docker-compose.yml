@@ -10,8 +10,9 @@ services:
     build: core/rest
     environment:
       REDIS_HOST: "172.20.0.2:6379"
-      TOKEN_SECRET: youshouldmaybechangethis
       ROCKET_ADDRESS: 0.0.0.0
+    env_file:
+      - .rest.env
     ports:
       - 8880:8000
     networks:
@@ -37,6 +38,11 @@ services:
   redis:
     image: redislabs/rejson:latest
     restart: unless-stopped
+    volumes:
+      - redis_data:/data
     networks:
       internal:
         ipv4_address: 172.20.0.2
+    command: redis-server --loadmodule /usr/lib/redis/modules/rejson.so --dir /data --save 900 1 --save 300 5 --save 60 15
+volumes:
+  redis_data:

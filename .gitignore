@@ -22,3 +22,5 @@ Cargo.lock
 #/target
 core/rest/private.key
 core/rest/private.pem
+
+.rest.env
